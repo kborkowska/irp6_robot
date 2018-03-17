@@ -113,6 +113,9 @@ class IRPOS:
 		self.joint_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_joint', FollowJointTrajectoryAction)
 		self.joint_client.wait_for_server()
 
+		self.joint_client_res = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_joint_limits', FollowJointTrajectoryAction)
+		self.joint_client_res.wait_for_server()
+
 		self.tfg_motor_client = actionlib.SimpleActionClient('/'+robotNameLower+'_tfg/spline_trajectory_action_motor', FollowJointTrajectoryAction)
 		self.tfg_motor_client.wait_for_server()
 
@@ -120,7 +123,7 @@ class IRPOS:
 		self.tfg_joint_client.wait_for_server()
 
 		self.tool_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/tool_trajectory', CartesianTrajectoryAction)
-		self.tool_client.wait_for_server()
+		self.tool_client.wait_for_server(),
 
 		self.pose_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/pose_trajectory', CartesianTrajectoryAction)
 		self.pose_client.wait_for_server()
@@ -314,7 +317,7 @@ class IRPOS:
 		for j in self.robot_joint_names:
 			jointGoal.path_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
 			jointGoal.goal_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
-
+		#print jointGoal
 		self.joint_client.send_goal(jointGoal)
 		self.joint_client.wait_for_result()
 		
@@ -323,6 +326,31 @@ class IRPOS:
 		print self.BCOLOR+"[IRPOS] Result: "+str(code)+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorJoint'], True)
+		return result
+
+
+	def move_to_joint_position_reserch(self, joint_positions, max_velocities, max_accelerations):
+		print self.BCOLOR+"[IRPOS][RESEARCH] Move to joint position"+self.ENDC
+
+		self.conmanSwitch([self.robot_name+'mSplineTrajectoryGeneratorJointLimits'], [], True)
+		
+		jointGoal = FollowJointTrajectoryGoal()
+		jointGoal.trajectory.joint_names = self.robot_joint_names
+		jointGoal.trajectory.points.append(JointTrajectoryPoint(joint_positions, [0.0, 0.0,\
+								  0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [], rospy.Duration(3.0)))
+		jointGoal.trajectory.header.stamp = rospy.get_rostime() + rospy.Duration(0.2)
+		for j in self.robot_joint_names:
+			jointGoal.path_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
+			jointGoal.goal_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
+		#print jointGoal
+		self.joint_client_res.send_goal(jointGoal)
+		self.joint_client_res.wait_for_result()
+		
+		result = self.joint_client_res.get_result()
+		code = self.spline_error_code_to_string(result.error_code)
+		print self.BCOLOR+"[IRPOS][RESEARCH] Result: "+str(code)+self.ENDC
+
+		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorJointLimits'], True)
 		return result
 
 	def move_rel_to_joint_position(self, joint_positions, time_from_start):
