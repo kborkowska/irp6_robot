@@ -18,6 +18,7 @@ from control_msgs.msg import *
 from cartesian_trajectory_msgs.msg import *
 from force_control_msgs.msg import *
 from tf.transformations import *
+from trapezoidal_trajectory_msgs.msg import *
 
 from sensor_msgs.msg import *
 
@@ -113,7 +114,7 @@ class IRPOS:
 		self.joint_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_joint', FollowJointTrajectoryAction)
 		self.joint_client.wait_for_server()
 
-		self.joint_client_res = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_joint_limits', FollowJointTrajectoryAction)
+		self.joint_client_res = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_joint_limits', TrapezoidTrajectoryAction)
 		self.joint_client_res.wait_for_server()
 
 		self.tfg_motor_client = actionlib.SimpleActionClient('/'+robotNameLower+'_tfg/spline_trajectory_action_motor', FollowJointTrajectoryAction)
@@ -128,7 +129,7 @@ class IRPOS:
 		self.pose_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/pose_trajectory', CartesianTrajectoryAction)
 		self.pose_client.wait_for_server()
 
-		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorMotor', self.robot_name+'mSplineTrajectoryGeneratorJoint', self.robot_name+'mPoseInt', self.robot_name+'mForceTransformation', self.robot_name+'mForceControlLaw', self.robot_name+'tfgSplineTrajectoryGeneratorJoint', self.robot_name+'tfgSplineTrajectoryGeneratorMotor'], True)
+		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorMotor', self.robot_name+'mSplineTrajectoryGeneratorJoint', self.robot_name+'mSplineTrajectoryGeneratorJointLimits',self.robot_name+'mPoseInt', self.robot_name+'mForceTransformation', self.robot_name+'mForceControlLaw', self.robot_name+'tfgSplineTrajectoryGeneratorJoint', self.robot_name+'tfgSplineTrajectoryGeneratorMotor'], True)
 
 		self.motor_client.cancel_goal()
 		self.joint_client.cancel_goal()
@@ -170,6 +171,31 @@ class IRPOS:
 
 	def get_zeros_vector(self):
 		return [0.0] * len(self.robot_joint_names)
+
+	def trapezoid_error_code_to_string(self, error_code):
+		if (error_code==0): 
+			return "SUCCESSFUL"
+		elif (error_code==-1): 
+			return self.RCOLOR+"INVALID_GOAL"
+		elif (error_code==-2): 
+			return self.RCOLOR+"INVALID_JOINTS"
+		elif (error_code==-3): 
+			return self.RCOLOR+"OLD_HEADER_TIMESTAMP"
+		elif (error_code==-4): 
+			return self.RCOLOR+"PATH_TOLERANCE_VIOLATED"
+		elif (error_code==-5): 
+			return self.RCOLOR+"GOAL_TOLERANCE_VIOLATED"
+		elif (error_code==-6): 
+			return self.RCOLOR+"LIMIT_ARRAY_TOO_SMALL"
+		elif (error_code==-7): 
+			return self.RCOLOR+"TRAJECTORY_NOT_FEASIBLE"
+		elif (error_code==-8): 
+			return self.RCOLOR+"CANT_CALCULATE_COEFFS"
+		elif (error_code==-9): 
+			return self.RCOLOR+"MAX_VEL_UNREACHEABLE"
+		elif (error_code==-10): 
+			return self.RCOLOR+"BREACHED_POS_LIMIT"
+		return "UNKNOWN"
 
 	def spline_error_code_to_string(self, error_code):
 		if (error_code==0): 
@@ -334,7 +360,7 @@ class IRPOS:
 
 		self.conmanSwitch([self.robot_name+'mSplineTrajectoryGeneratorJointLimits'], [], True)
 		
-		jointGoal = FollowJointTrajectoryGoal()
+		jointGoal = TrapezoidTrajectoryGoal()
 		jointGoal.trajectory.joint_names = self.robot_joint_names
 		jointGoal.trajectory.points.append(JointTrajectoryPoint(joint_positions, [0.0, 0.0,\
 								  0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [], rospy.Duration(3.0)))
@@ -342,13 +368,17 @@ class IRPOS:
 		for j in self.robot_joint_names:
 			jointGoal.path_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
 			jointGoal.goal_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
+		jointGoal.research_mode = True
+		jointGoal.max_velocities = max_velocities
+		jointGoal.max_accelerations = max_accelerations
 		#print jointGoal
 		self.joint_client_res.send_goal(jointGoal)
 		self.joint_client_res.wait_for_result()
 		
 		result = self.joint_client_res.get_result()
-		code = self.spline_error_code_to_string(result.error_code)
+		code = self.trapezoid_error_code_to_string(result.result.error_code)
 		print self.BCOLOR+"[IRPOS][RESEARCH] Result: "+str(code)+self.ENDC
+		print self.BCOLOR+"[IRPOS][RESEARCH] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorJointLimits'], True)
 		return result
