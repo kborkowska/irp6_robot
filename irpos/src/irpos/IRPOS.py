@@ -114,7 +114,7 @@ class IRPOS:
 		self.joint_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_joint', FollowJointTrajectoryAction)
 		self.joint_client.wait_for_server()
 
-		self.joint_client_res = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_joint_limits', TrapezoidTrajectoryAction)
+		self.joint_client_res = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/trapezoid_trajectory_action_joint', TrapezoidTrajectoryAction)
 		self.joint_client_res.wait_for_server()
 
 		self.tfg_motor_client = actionlib.SimpleActionClient('/'+robotNameLower+'_tfg/spline_trajectory_action_motor', FollowJointTrajectoryAction)
@@ -129,7 +129,7 @@ class IRPOS:
 		self.pose_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/pose_trajectory', CartesianTrajectoryAction)
 		self.pose_client.wait_for_server()
 
-		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorMotor', self.robot_name+'mSplineTrajectoryGeneratorJoint', self.robot_name+'mSplineTrajectoryGeneratorJointLimits',self.robot_name+'mPoseInt', self.robot_name+'mForceTransformation', self.robot_name+'mForceControlLaw', self.robot_name+'tfgSplineTrajectoryGeneratorJoint', self.robot_name+'tfgSplineTrajectoryGeneratorMotor'], True)
+		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorMotor', self.robot_name+'mSplineTrajectoryGeneratorJoint', self.robot_name+'mTrapezoidTrajectoryGeneratorJoint',self.robot_name+'mPoseInt', self.robot_name+'mForceTransformation', self.robot_name+'mForceControlLaw', self.robot_name+'tfgSplineTrajectoryGeneratorJoint', self.robot_name+'tfgSplineTrajectoryGeneratorMotor'], True)
 
 		self.motor_client.cancel_goal()
 		self.joint_client.cancel_goal()
@@ -358,7 +358,7 @@ class IRPOS:
 	def move_to_joint_position_reserch(self, joint_positions, max_velocities, max_accelerations):
 		print self.BCOLOR+"[IRPOS][RESEARCH] Move to joint position"+self.ENDC
 
-		self.conmanSwitch([self.robot_name+'mSplineTrajectoryGeneratorJointLimits'], [], True)
+		self.conmanSwitch([self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], [], True)
 		
 		jointGoal = TrapezoidTrajectoryGoal()
 		jointGoal.trajectory.joint_names = self.robot_joint_names
@@ -380,7 +380,7 @@ class IRPOS:
 		print self.BCOLOR+"[IRPOS][RESEARCH] Result: "+str(code)+self.ENDC
 		print self.BCOLOR+"[IRPOS][RESEARCH] "+result.result.error_string+self.ENDC
 
-		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorJointLimits'], True)
+		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], True)
 		return result
 
 	def move_rel_to_joint_position(self, joint_positions, time_from_start):
