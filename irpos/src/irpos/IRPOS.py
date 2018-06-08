@@ -26,7 +26,7 @@ import threading
 import PyKDL
 import tf_conversions.posemath as pm
 
-class IRPOS:
+class IRPOS(object):
 
 	BCOLOR = '\033[94m'
 	RCOLOR = '\033[91m'
@@ -98,7 +98,6 @@ class IRPOS:
 		self.motor_position_subscriber = rospy.Subscriber('/'+robotNameLower+'_arm/motor_states', JointState, self.motor_position_callback)
 		self.joint_position_subscriber = rospy.Subscriber('/'+robotNameLower+'_arm/joint_states', JointState, self.joint_position_callback)
 
-
 		self.tfg_motor_position_subscriber = rospy.Subscriber('/'+robotNameLower+'_tfg/motor_state', JointState, self.tfg_motor_position_callback)
 		self.tfg_joint_position_subscriber = rospy.Subscriber('/'+robotNameLower+'_tfg/joint_state', JointState, self.tfg_joint_position_callback)
 
@@ -111,14 +110,8 @@ class IRPOS:
 		self.motor_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_motor', FollowJointTrajectoryAction)
 		self.motor_client.wait_for_server()
 
-		self.motor_client_res = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/trapezoid_trajectory_action_motor', TrapezoidTrajectoryAction)
-		self.motor_client_res.wait_for_server()
-
 		self.joint_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/spline_trajectory_action_joint', FollowJointTrajectoryAction)
 		self.joint_client.wait_for_server()
-
-		self.joint_client_res = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/trapezoid_trajectory_action_joint', TrapezoidTrajectoryAction)
-		self.joint_client_res.wait_for_server()
 
 		self.tfg_motor_client = actionlib.SimpleActionClient('/'+robotNameLower+'_tfg/spline_trajectory_action_motor', FollowJointTrajectoryAction)
 		self.tfg_motor_client.wait_for_server()
@@ -132,7 +125,7 @@ class IRPOS:
 		self.pose_client = actionlib.SimpleActionClient('/'+robotNameLower+'_arm/pose_trajectory', CartesianTrajectoryAction)
 		self.pose_client.wait_for_server()
 
-		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorMotor', self.robot_name+'mTrapezoidTrajectoryGeneratorJoint', self.robot_name+'mTrapezoidTrajectoryGeneratorMotor',self.robot_name+'mPoseInt', self.robot_name+'mForceTransformation', self.robot_name+'mForceControlLaw', self.robot_name+'tfgSplineTrajectoryGeneratorJoint', self.robot_name+'tfgSplineTrajectoryGeneratorMotor'], True)
+		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorMotor', self.robot_name+'mSplineTrajectoryGeneratorJoint', self.robot_name+'mPoseInt', self.robot_name+'mForceTransformation', self.robot_name+'mForceControlLaw', self.robot_name+'tfgSplineTrajectoryGeneratorJoint', self.robot_name+'tfgSplineTrajectoryGeneratorMotor'], True)
 
 		self.motor_client.cancel_goal()
 		self.joint_client.cancel_goal()
@@ -175,38 +168,7 @@ class IRPOS:
 	def get_zeros_vector(self):
 		return [0.0] * len(self.robot_joint_names)
 
-	def trapezoid_error_code_to_string(self, error_code):
-		if (error_code==0): 
-			return "SUCCESSFUL"
-		elif (error_code==-1): 
-			return self.RCOLOR+"INVALID_GOAL"
-		elif (error_code==-2): 
-			return self.RCOLOR+"INVALID_JOINTS"
-		elif (error_code==-3): 
-			return self.RCOLOR+"OLD_HEADER_TIMESTAMP"
-		elif (error_code==-4): 
-			return self.RCOLOR+"PATH_TOLERANCE_VIOLATED"
-		elif (error_code==-5): 
-			return self.RCOLOR+"GOAL_TOLERANCE_VIOLATED"
-		elif (error_code==-6): 
-			return self.RCOLOR+"LIMIT_ARRAY_TOO_SMALL"
-		elif (error_code==-7): 
-			return self.RCOLOR+"TRAJECTORY_NOT_FEASIBLE"
-		elif (error_code==-8): 
-			return self.RCOLOR+"CANT_CALCULATE_COEFFS"
-		elif (error_code==-9): 
-			return self.RCOLOR+"MAX_VEL_UNREACHEABLE"
-		elif (error_code==-10): 
-			return self.RCOLOR+"BREACHED_POS_LIMIT"
-		elif (error_code==-11): 
-			return self.RCOLOR+"ACC_TOO_SMALL_FOR_DURATION"
-		elif (error_code==-12): 
-			return self.RCOLOR+"DURATION_TOO_LONG"
-		elif (error_code==-13): 
-			return self.RCOLOR+"DURATION_TOO_SHORT"
-		elif (error_code==-14): 
-			return self.RCOLOR+"IMPOSSIBLE_VELOCITY"
-		return "UNKNOWN"
+
 
 	def spline_error_code_to_string(self, error_code):
 		if (error_code==0): 
@@ -282,35 +244,6 @@ class IRPOS:
 		print self.BCOLOR+"[IRPOS] Result: "+str(code)+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorMotor'], True)
-		return result
-
-
-	def move_to_motor_position_research(self, motor_positions, max_velocities, max_accelerations):
-		print self.BCOLOR+"[IRPOS][RESEARCH] Move to motor position"+self.ENDC
-
-		self.conmanSwitch([self.robot_name+'mTrapezoidTrajectoryGeneratorMotor'], [], True)
-
-		motorGoal = TrapezoidTrajectoryGoal()
-		motorGoal.trajectory.joint_names = self.robot_joint_names
-		motorGoal.trajectory.points.append(JointTrajectoryPoint(motor_positions, [0.0, 0.0,\
-								  0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [], rospy.Duration(0.0)))
-		motorGoal.trajectory.header.stamp = rospy.get_rostime() + rospy.Duration(0.2)
-		for j in self.robot_joint_names:
-			motorGoal.path_tolerance.append(JointTolerance(j, self.MOTOR_POS_TOLERANCE, 0, 0))
-			motorGoal.goal_tolerance.append(JointTolerance(j, self.MOTOR_POS_TOLERANCE, 0, 0))
-		motorGoal.research_mode = True
-		motorGoal.max_velocities = max_velocities
-		motorGoal.max_accelerations = max_accelerations
-
-		self.motor_client_res.send_goal(motorGoal)
-		self.motor_client_res.wait_for_result()
-
-		result = self.motor_client_res.get_result()
-		code = self.trapezoid_error_code_to_string(result.result.error_code)
-		print self.BCOLOR+"[IRPOS][RESEARCH] Result: "+str(code)+self.ENDC
-		print self.BCOLOR+"[IRPOS][RESEARCH] "+result.result.error_string+self.ENDC
-
-		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorMotor'], True)
 		return result
 
 
@@ -396,61 +329,6 @@ class IRPOS:
 		return result
 
 
-	def move_to_joint_position_research(self, joint_positions, max_velocities, max_accelerations):
-		print self.BCOLOR+"[IRPOS][RESEARCH] Move to joint position"+self.ENDC
-
-		self.conmanSwitch([self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], [], True)
-		
-		jointGoal = TrapezoidTrajectoryGoal()
-		jointGoal.trajectory.joint_names = self.robot_joint_names
-		jointGoal.trajectory.points.append(JointTrajectoryPoint(joint_positions, [0.0, 0.0,\
-								  0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [], rospy.Duration(3.0)))
-		jointGoal.trajectory.header.stamp = rospy.get_rostime() + rospy.Duration(0.2)
-		for j in self.robot_joint_names:
-			jointGoal.path_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
-			jointGoal.goal_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
-		jointGoal.research_mode = True
-		jointGoal.max_velocities = max_velocities
-		jointGoal.max_accelerations = max_accelerations
-		#print jointGoal
-		self.joint_client_res.send_goal(jointGoal)
-		self.joint_client_res.wait_for_result()
-		
-		result = self.joint_client_res.get_result()
-		code = self.trapezoid_error_code_to_string(result.result.error_code)
-		print self.BCOLOR+"[IRPOS][RESEARCH] Result: "+str(code)+self.ENDC
-		print self.BCOLOR+"[IRPOS][RESEARCH] "+result.result.error_string+self.ENDC
-
-		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], True)
-		return result
-
-	def move_to_joint_position_trapezoid(self, joint_positions):
-		print self.BCOLOR+"[IRPOS][TRAPEZOID] Move to joint position"+self.ENDC
-
-		self.conmanSwitch([self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], [], True)
-		
-		jointGoal = TrapezoidTrajectoryGoal()
-		jointGoal.trajectory.joint_names = self.robot_joint_names
-		jointGoal.trajectory.points.append(JointTrajectoryPoint(joint_positions, [0.0, 0.0,\
-								  0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [], rospy.Duration(3.0)))
-		jointGoal.trajectory.header.stamp = rospy.get_rostime() + rospy.Duration(0.2)
-		for j in self.robot_joint_names:
-			jointGoal.path_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
-			jointGoal.goal_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
-		jointGoal.research_mode = False
-		#print jointGoal
-		self.joint_client_res.send_goal(jointGoal)
-		self.joint_client_res.wait_for_result()
-		
-		result = self.joint_client_res.get_result()
-		code = self.trapezoid_error_code_to_string(result.result.error_code)
-		print self.BCOLOR+"[IRPOS][TRAPEZOID] Result: "+str(code)+self.ENDC
-		print self.BCOLOR+"[IRPOS][TRAPEZOID] "+result.result.error_string+self.ENDC
-
-		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], True)
-		return result
-
-
 	def move_rel_to_joint_position(self, joint_positions, time_from_start):
 		print self.BCOLOR+"[IRPOS] Move relative to joint position"+self.ENDC
 
@@ -500,63 +378,6 @@ class IRPOS:
 		print self.BCOLOR+"[IRPOS] Result: "+str(code)+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mSplineTrajectoryGeneratorJoint'], True)
-		return result
-
-	def move_along_joint_trajectory_trapezoid(self, points):
-		print self.BCOLOR+"[IRPOS] Move along joint trajectory trapezoid"+self.ENDC
-
-		self.conmanSwitch([self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], [], True)
-		
-		jointGoal = TrapezoidTrajectoryGoal()
-		jointGoal.trajectory.joint_names = self.robot_joint_names
-		for i in points:
-			jointGoal.trajectory.points.append(JointTrajectoryPoint(i.positions, i.velocities, i.accelerations, i.effort, i.time_from_start))
-			print str(i.positions)
-		jointGoal.trajectory.header.stamp = rospy.get_rostime() + rospy.Duration(0.2)
-		for j in self.robot_joint_names:
-			jointGoal.path_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
-			jointGoal.goal_tolerance.append(JointTolerance(j, self.JOINT_POS_TOLERANCE, 0, 0))
-
-		jointGoal.research_mode = False;
-
-		self.joint_client.send_goal(jointGoal)
-		self.joint_client.wait_for_result()
-		
-		result = self.joint_client.get_result()
-		code = self.trapezoid_error_code_to_string(result.result.error_code)
-		print self.BCOLOR+"[IRPOS][TRAPEZOID] Result: "+str(code)+self.ENDC
-		print self.BCOLOR+"[IRPOS][TRAPEZOID] "+result.result.error_string+self.ENDC
-
-		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], True)
-		return result
-
-	def move_along_motor_trajectory_research(self, points, max_velocities, max_accelerations):
-		print self.BCOLOR+"[IRPOS][RESEARCH] Move along motor trajectory trapezoid"+self.ENDC
-
-		self.conmanSwitch([self.robot_name+'mTrapezoidTrajectoryGeneratorMotor'], [], True)
-		
-		jointGoal = TrapezoidTrajectoryGoal()
-		jointGoal.trajectory.joint_names = self.robot_joint_names
-		for i in points:
-			jointGoal.trajectory.points.append(JointTrajectoryPoint(i.positions, i.velocities, i.accelerations, i.effort, i.time_from_start))
-			print str(i.positions)
-		jointGoal.trajectory.header.stamp = rospy.get_rostime() + rospy.Duration(0.2)
-		for j in self.robot_joint_names:
-			jointGoal.path_tolerance.append(JointTolerance(j, self.MOTOR_POS_TOLERANCE, 0, 0))
-			jointGoal.goal_tolerance.append(JointTolerance(j, self.MOTOR_POS_TOLERANCE, 0, 0))
-		jointGoal.max_velocities = max_velocities
-		jointGoal.max_accelerations = max_accelerations
-		jointGoal.research_mode = True;
-
-		self.motor_client_res.send_goal(jointGoal)
-		self.motor_client_res.wait_for_result()
-		
-		result = self.motor_client_res.get_result()
-		code = self.trapezoid_error_code_to_string(result.result.error_code)
-		print self.BCOLOR+"[IRPOS][RESEARCH] Result: "+str(code)+self.ENDC
-		print self.BCOLOR+"[IRPOS][RESEARCH] "+result.result.error_string+self.ENDC
-
-		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorMotor'], True)
 		return result
 
 
