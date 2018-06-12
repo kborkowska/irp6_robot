@@ -5,6 +5,7 @@ import tf
 import actionlib
 import sys
 import time
+import os
 
 from numpy import *
 from numpy.linalg import *
@@ -118,6 +119,12 @@ class IRPOS_T(IRPOS):
 			print self.BCOLOR+"[IRPOS][TRAPEZOID_VELOCITY] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorMotor'], True)
+		if (save_data):
+			if (research_mode):
+				command = 'sfs MPVR'
+			else:
+				command = "sfs MPV"
+			os.system(command)
 		return result
 
 
@@ -154,6 +161,12 @@ class IRPOS_T(IRPOS):
 			print self.BCOLOR+"[IRPOS][TRAPEZOID_VELOCITY] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorMotor'], True)
+		if (save_data):
+			if (research_mode):
+				command = 'sfs MTVR'
+			else:
+				command = "sfs MTV"
+			os.system(command)
 		return result
 
 #---------------------------------# MOTOR DURATION #---------------------------------#
@@ -191,6 +204,12 @@ class IRPOS_T(IRPOS):
 			print self.BCOLOR+"[IRPOS][TRAPEZOID_DURATION] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorMotor'], True)
+		if (save_data):
+			if (research_mode):
+				command = 'sfs MPDR'
+			else:
+				command = "sfs MPD"
+			os.system(command)
 		return result
 
 
@@ -225,6 +244,12 @@ class IRPOS_T(IRPOS):
 			print self.BCOLOR+"[IRPOS][TRAPEZOID_DURATION] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorMotor'], True)
+		if (save_data):
+			if (research_mode):
+				command = 'sfs MTDR'
+			else:
+				command = "sfs MTD"
+			os.system(command)
 		return result
 
 #---------------------------------# JOINT VELOCITY #---------------------------------#
@@ -264,6 +289,12 @@ class IRPOS_T(IRPOS):
 			print self.BCOLOR+"[IRPOS][TRAPEZOID_VELOCITY] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], True)
+		if (save_data):
+			if (research_mode):
+				command = 'sfs JPVR'
+			else:
+				command = "sfs JPV"
+			os.system(command)
 		return result
 
 	def move_along_joint_trajectory_trapezoid_velocity(self, points, max_velocities, max_accelerations, save_data, research_mode):
@@ -299,6 +330,12 @@ class IRPOS_T(IRPOS):
 			print self.BCOLOR+"[IRPOS][TRAPEZOID_VELOCITY] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], True)
+		if (save_data):
+			if (research_mode):
+				command = 'sfs JTVR'
+			else:
+				command = "sfs JTV"
+			os.system(command)
 		return result
 
 #---------------------------------# JOINT DURATION #---------------------------------#
@@ -336,6 +373,12 @@ class IRPOS_T(IRPOS):
 			print self.BCOLOR+"[IRPOS][TRAPEZOID_DURATION] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], True)
+		if (save_data):
+			if (research_mode):
+				command = 'sfs JPDR'
+			else:
+				command = "sfs JPD"
+			os.system(command)
 		return result
 
 	def move_along_joint_trajectory_trapezoid_duration(self, points, save_data, research_mode):
@@ -369,4 +412,10 @@ class IRPOS_T(IRPOS):
 			print self.BCOLOR+"[IRPOS][TRAPEZOID_DURATION] "+result.result.error_string+self.ENDC
 
 		self.conmanSwitch([], [self.robot_name+'mTrapezoidTrajectoryGeneratorJoint'], True)
+		if (save_data):
+			if (research_mode):
+				command = 'sfs JTDR'
+			else:
+				command = "sfs JTD"
+			os.system(command)
 		return result
